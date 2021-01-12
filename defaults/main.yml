@@ -1,0 +1,10 @@
+---
+user_accounts: []
+#   - name: login
+#     pubkey:
+#       -  "ssh-rsa key user@example.com"
+#     groups:
+#       - docker
+#       - sudo # optional
+#     comment: Name Surname <user@ecample.com>
+#     state: absent # optional

@@ -1,0 +1,79 @@
+---
+- name: Make sure we have a 'sudo' group
+  group:
+    name: sudo
+    state: present
+
+- name: Allow 'sudo' group to have passwordless sudo
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%sudo'
+    line: '%sudo ALL=(ALL) NOPASSWD: ALL'
+
+- name: Add user groups
+  group:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ user_accounts | selectattr('groups', 'defined')|map(attribute='groups')|list|unique }}"  # noqa 204
+
+- name: Add user accounts
+  user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups|default([])|join(',') }}"
+    comment: "{{ item.comment|default('') }}"
+    shell: /bin/bash
+    append: yes
+    password: "{{ item.password | default('omit') }}"
+    update_password: "{{ item.update_password | default('on_create') }}"
+  with_items:
+    - "{{ user_accounts }}"
+  when: item.uid is not defined and (item.state is not defined or (item.state is defined and item.state == 'present'))
+
+- name: Add user accounts with uid setup
+  user:
+    name: "{{ item.name }}"
+    uid: "{{ item.uid }}"
+    groups: "{{ item.groups|default([])|join(',') }}"
+    comment: "{{ item.comment|default('') }}"
+    shell: /bin/bash
+    append: yes
+    password: "{{ item.password | default('omit') }}"
+    update_password: "{{ item.update_password | default('on_create') }}"
+  with_items:
+    - "{{ user_accounts }}"
+  when: item.uid is defined and (item.state is not defined or (item.state is defined and item.state == 'present'))
+
+- name: Configure expires
+  user:
+    name: "{{ item.name }}"
+    expires: "{{ item.expires }}"
+  with_items:
+    - "{{ user_accounts }}"
+  when: (item.state is not defined or (item.state is defined and item.state == 'present')) and item.expires is defined
+
+- name: Set proper permissions on home dir
+  file:
+    path: "/home/{{ item.name }}"
+    mode: 0700
+  with_items:
+    - "{{ user_accounts }}"
+  when: (item.state is not defined or (item.state is defined and item.state == 'present'))
+
+- name: Authorize SSH keys on users accounts
+  authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ item.pubkey|join('\n') }}"
+  with_items:
+    - "{{ user_accounts }}"
+  when: (item.state is not defined or (item.state is defined and item.state == 'present')) and ( item.pubkey is iterable and item.pubkey is not string )
+
+- name: Remove old accounts
+  user:
+    name: "{{ item.name }}"
+    remove: yes
+    force: yes
+    state: absent
+  with_items:
+    - "{{ user_accounts }}"
+  when: item.state is defined and item.state == 'absent'

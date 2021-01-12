@@ -1,0 +1,24 @@
+---
+- name: Converge
+  hosts: all
+  vars:
+    user_accounts:
+      - name: testaccount1
+        pubkey:
+          - "ssh-rsa key2 usermail@example.com"
+        state: present
+      - name: testaccount2
+        pubkey:
+          - "ssh-rsa key2 usermail@example.com"
+        groups:
+          - docker
+          - sudo
+        comment: Name Surname <usermail@example.com>
+        state: present
+      - name: testaccount3
+        state: absent
+
+  tasks:
+    - name: "Include users"
+      include_role:
+        name: "users"

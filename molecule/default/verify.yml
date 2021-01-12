@@ -1,0 +1,40 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+  - name: check user testaccount1
+    shell: grep -q testaccount1 /etc/passwd
+    register: testaccount1
+
+  - name: check user testaccount2
+    shell: grep -q testaccount2 /etc/passwd
+    register: testaccount2
+
+  - name: check user testaccount3
+    shell: grep -q testaccount3 /etc/passwd
+    register: testaccount3
+    ignore_errors: yes
+
+  - name: check sudo group
+    shell: getent group sudo
+    register: sudo
+
+  - name: check docker group
+    shell: getent group docker
+    register: docker
+
+  - name: debug
+    debug:
+      var: sudo
+
+  - name: assert
+    assert:
+      that:
+        - "{{ testaccount1.rc }} == 0"
+        - "{{ testaccount2.rc }} == 0"
+        - "{{ testaccount3.rc }} == 1"
+        - "'testaccount2' in {{ sudo.stdout.split(':') }}"
+        - "'testaccount2' in {{ docker.stdout.split(':') }}"
